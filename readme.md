@@ -1,141 +1,246 @@
-Configure AWS Account
+# Lambda Items API
 
-Configure AWS CLI with your credentials:
+A serverless AWS Lambda application that provides a REST API for managing items using DynamoDB. Built with AWS SAM (Serverless Application Model) and Node.js.
 
+## Overview
+
+This project implements a serverless API endpoint that allows you to:
+- **POST** items to create new entries in DynamoDB
+- **GET** items by ID from DynamoDB
+
+The application uses AWS Lambda for compute, API Gateway for HTTP endpoints, and DynamoDB for data storage.
+
+## Architecture
+
+- **Runtime**: Node.js 20.x
+- **Framework**: AWS SAM (Serverless Application Model)
+- **Database**: DynamoDB 
+- **API**: API Gateway (REST API)
+
+### Resources
+
+- `ItemsFunction`: Lambda function handling GET and POST requests
+- `ItemsTable`: DynamoDB table storing items with `id` as the primary key
+- API Gateway endpoint at `/items`
+
+## Prerequisites
+
+- [AWS CLI](https://aws.amazon.com/cli/) installed and configured
+- [AWS SAM CLI](https://docs.aws.amazon.com/serverless-application-model/latest/developerguide/install-sam-cli.html) installed
+- Node.js 20.x or later
+- An AWS account with appropriate permissions
+
+## Setup
+
+### 1. Configure AWS CLI
+
+Configure your AWS credentials:
+
+```bash
 aws configure
+```
+If you want access to the shared AWS account, DM Pouyan on Discord for the account details.
+Enter that account credentials from IAM into AWS CLI.
 
+Enter your:
+- AWS Access Key ID
+- AWS Secret Access Key
+- Default region (e.g., `us-west-2`)
+- Default output format (`json`)
 
-Enter:
+Verify your configuration:
 
-AWS Access Key ID
-
-AWS Secret Access Key
-
-Default region (e.g., us-east-1)
-
-Default output format (json)
-
-Verify:
-
+```bash
 aws sts get-caller-identity
+```
 
-Create a Lambda Function
+### 2. Install Dependencies
 
-Create a new SAM application:
+Install the required Node.js packages:
 
-sam init
+```bash
+npm install
+```
 
+## Local Development
 
-Choose 1 - AWS Quick Start Templates
+### Build the Application
 
-Runtime: Node.js 20.x
-
-Application template: Hello World Example
-
-Project name: serverless-app
-
-The folder structure:
-
-serverless-app/
-├── functions/
-│   └── helloWorld/
-│       ├── index.js
-├── template.yaml
-├── package.json
-└── README.md
-
-
-Example Lambda handler (functions/helloWorld/index.js):
-
-exports.handler = async (event) => {
-    const name = event.queryStringParameters?.name || "World";
-    return {
-        statusCode: 200,
-        body: JSON.stringify({ message: `Hello, ${name}!` }),
-    };
-};
-
-Run Lambda Locally
-
-Build the project:
-
+```bash
 sam build
+```
 
+### Test Locally
 
-Invoke the function locally:
+#### Invoke the Function Directly
 
-sam local invoke HelloWorldFunction -e event.json
-
-
-Test as an API:
-
-sam local start-api
-curl "http://localhost:3000/hello?name=SAM"
-
-Connect Lambda to DynamoDB
-
-Install AWS SDK for Node.js:
-
-npm install @aws-sdk/client-dynamodb @aws-sdk/lib-dynamodb
-
-
-Example code (functions/items/index.js):
-
-const { DynamoDBClient } = require("@aws-sdk/client-dynamodb");
-const { DynamoDBDocumentClient, PutCommand, GetCommand } = require("@aws-sdk/lib-dynamodb");
-
-const REGION = process.env.AWS_REGION || "us-east-1";
-const TABLE_NAME = process.env.TABLE_NAME || "ItemsTable";
-
-const client = new DynamoDBClient({ region: REGION });
-const ddb = DynamoDBDocumentClient.from(client);
-
-exports.handler = async (event) => {
-  const method = event.httpMethod || "GET";
-  if (method === "POST") {
-    const body = JSON.parse(event.body);
-    const item = { id: body.id, name: body.name, createdAt: new Date().toISOString() };
-    await ddb.send(new PutCommand({ TableName: TABLE_NAME, Item: item }));
-    return { statusCode: 200, body: JSON.stringify({ message: "Item added", item }) };
-  } else if (method === "GET") {
-    const id = event.queryStringParameters?.id;
-    const data = await ddb.send(new GetCommand({ TableName: TABLE_NAME, Key: { id } }));
-    return { statusCode: 200, body: JSON.stringify(data.Item || { message: "Item not found" }) };
-  } else {
-    return { statusCode: 400, body: JSON.stringify({ message: "Unsupported method" }) };
-  }
-};
-
-Deploy Lambda to AWS
-
-Build:
-
-sam build
-
-
-Deploy:
-
-sam deploy --guided
-
-
-Provide stack name, region, and confirm permissions
-
-SAM will create resources and outputs including API endpoint
-
-Testing
-
-Local test:
-
+```bash
 sam local invoke ItemsFunction -e functions/items/event.json
+```
 
+#### Run as Local API
 
-API test:
+Start the local API server:
 
+```bash
 sam local start-api
-curl -X POST http://localhost:3000/items -d '{"id":"1","name":"Book"}'
-curl http://localhost:3000/items?id=1
+```
 
+The API will be available at `http://localhost:3000`
 
-AWS test (after deployment):
+#### Test Endpoints
 
-curl https://<api-id>.execute-api.us-east-1.amazonaws.com/Prod/items?id=1
+**Create an item (POST):**
+```powershell
+curl -X POST http://localhost:3000/items -H "Content-Type: application/json" -d "{\"id\": \"123\", \"name\": \"Test Item\"}"
+```
+
+Or using PowerShell's `Invoke-RestMethod`:
+```powershell
+Invoke-RestMethod -Uri "http://localhost:3000/items" -Method POST -ContentType "application/json" -Body '{"id": "123", "name": "Test Item"}'
+```
+
+**Get an item (GET):**
+```powershell
+curl "http://localhost:3000/items?id=123"
+```
+
+Or using PowerShell's `Invoke-RestMethod`:
+```powershell
+Invoke-RestMethod -Uri "http://localhost:3000/items?id=123" -Method GET
+```
+
+## Deployment
+
+### Build for Deployment
+
+```bash
+sam build
+```
+
+### Deploy to AWS (FOR LATER)
+
+Deploy using guided mode (first time):
+
+```bash
+sam deploy --guided
+```
+
+Follow the prompts to provide:
+- Stack name
+- AWS Region
+- Confirm IAM role creation
+- Confirm changeset
+- Save arguments to configuration file
+
+For subsequent deployments, you can use:
+
+```bash
+sam deploy
+```
+
+### Test Deployed API
+
+After deployment, SAM will output the API Gateway endpoint URL. Test it:
+
+```powershell
+# Create an item
+curl -X POST https://<api-id>.execute-api.<region>.amazonaws.com/Prod/items -H "Content-Type: application/json" -d "{\"id\": \"123\", \"name\": \"Test Item\"}"
+
+# Get an item
+curl "https://<api-id>.execute-api.<region>.amazonaws.com/Prod/items?id=123"
+```
+
+Or using PowerShell's `Invoke-RestMethod`:
+```powershell
+# Create an item
+Invoke-RestMethod -Uri "https://<api-id>.execute-api.<region>.amazonaws.com/Prod/items" -Method POST -ContentType "application/json" -Body '{"id": "123", "name": "Test Item"}'
+
+# Get an item
+Invoke-RestMethod -Uri "https://<api-id>.execute-api.<region>.amazonaws.com/Prod/items?id=123" -Method GET
+```
+
+## API Endpoints
+
+### POST /items
+
+Creates a new item in DynamoDB.
+
+**Request Body:**
+```json
+{
+  "id": "string",
+  "name": "string"
+}
+```
+
+**Response:**
+```json
+{
+  "message": "Item added",
+  "item": {
+    "id": "string",
+    "name": "string",
+    "createdAt": "2024-01-01T00:00:00.000Z"
+  }
+}
+```
+
+### GET /items?id={id}
+
+Retrieves an item by ID from DynamoDB.
+
+**Query Parameters:**
+- `id` (required): The ID of the item to retrieve
+
+**Response:**
+```json
+{
+  "id": "string",
+  "name": "string",
+  "createdAt": "2024-01-01T00:00:00.000Z"
+}
+```
+
+If item not found:
+```json
+{
+  "message": "Item not found"
+}
+```
+
+## Project Structure
+
+```
+root/
+├── functions/
+│   └── items/
+│       ├── index.js          # Lambda function handler
+│       └── event.json        # Sample event for local testing
+├── template.yaml              # SAM template defining AWS resources
+├── package.json               # Node.js dependencies
+└── README.md                  # This file
+```
+
+## Environment Variables
+
+The Lambda function uses the following environment variables (automatically set by SAM):
+
+- `TABLE_NAME`: DynamoDB table name (default: `ItemsTable`)
+- `AWS_REGION`: AWS region (default: `us-west-2`)
+
+## Error Handling
+
+The API returns appropriate HTTP status codes:
+- `200`: Success
+- `400`: Unsupported HTTP method
+- `500`: Internal server error
+
+## Cleanup
+
+To remove all AWS resources created by this application:
+
+```bash
+sam delete
+```
+
