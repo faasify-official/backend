@@ -1,20 +1,18 @@
-AWSTemplateFormatVersion: '2010-09-09'
+AWSTemplateFormatVersion: "2010-09-09"
 Transform: AWS::Serverless-2016-10-31
-Description: Lambda with DynamoDB read/write
+Description: E-commerce serverless application with listings, cart, orders, and reviews
 
 Globals:
   Function:
-    Timeout: 5
+    Timeout: 30
     Runtime: nodejs20.x
-    Environment:
-      Variables:
-        TABLE_NAME: !Ref ItemsTable
 
 Resources:
-  ItemsTable:
+  # DynamoDB Tables
+  ListingsTable:
     Type: AWS::DynamoDB::Table
     Properties:
-      TableName: ItemsTable
+      TableName: ListingsTable
       AttributeDefinitions:
         - AttributeName: id
           AttributeType: S
@@ -23,17 +21,145 @@ Resources:
           KeyType: HASH
       BillingMode: PAY_PER_REQUEST
 
-  ItemsFunction:
+  StorefrontsTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: StorefrontsTable
+      AttributeDefinitions:
+        - AttributeName: storeId
+          AttributeType: S
+      KeySchema:
+        - AttributeName: storeId
+          KeyType: HASH
+      BillingMode: PAY_PER_REQUEST
+
+  CartTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: CartTable
+      AttributeDefinitions:
+        - AttributeName: userId
+          AttributeType: S
+        - AttributeName: storeId
+          AttributeType: S
+      KeySchema:
+        - AttributeName: userId
+          KeyType: HASH
+        - AttributeName: storeId
+          KeyType: RANGE
+      BillingMode: PAY_PER_REQUEST
+
+  OrdersTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: OrdersTable
+      AttributeDefinitions:
+        - AttributeName: orderId
+          AttributeType: S
+      KeySchema:
+        - AttributeName: orderId
+          KeyType: HASH
+      BillingMode: PAY_PER_REQUEST
+
+  ReviewsTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: ReviewsTable
+      AttributeDefinitions:
+        - AttributeName: reviewId
+          AttributeType: S
+      KeySchema:
+        - AttributeName: reviewId
+          KeyType: HASH
+      BillingMode: PAY_PER_REQUEST
+
+  # Lambda Functions
+  ListingsFunction:
     Type: AWS::Serverless::Function
     Properties:
-      CodeUri: functions/items/
+      CodeUri: functions/listings/
       Handler: index.handler
+      Environment:
+        Variables:
+          LISTINGS_TABLE: !Ref ListingsTable
+          STOREFRONTS_TABLE: !Ref StorefrontsTable
       Policies:
         - DynamoDBCrudPolicy:
-            TableName: !Ref ItemsTable
+            TableName: !Ref ListingsTable
+        - DynamoDBCrudPolicy:
+            TableName: !Ref StorefrontsTable
       Events:
         ApiEvent:
           Type: Api
           Properties:
-            Path: /items
+            Path: /listings
+            Method: any
+
+  CartFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: functions/cart/
+      Handler: index.handler
+      Environment:
+        Variables:
+          CART_TABLE: !Ref CartTable
+          LISTINGS_TABLE: !Ref ListingsTable
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref CartTable
+        - DynamoDBCrudPolicy:
+            TableName: !Ref ListingsTable
+      Events:
+        ApiEvent:
+          Type: Api
+          Properties:
+            Path: /cart
+            Method: any
+
+  OrderFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: functions/order/
+      Handler: index.handler
+      Environment:
+        Variables:
+          ORDERS_TABLE: !Ref OrdersTable
+          CART_TABLE: !Ref CartTable
+          LISTINGS_TABLE: !Ref ListingsTable
+          STOREFRONTS_TABLE: !Ref StorefrontsTable
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref OrdersTable
+        - DynamoDBCrudPolicy:
+            TableName: !Ref CartTable
+        - DynamoDBCrudPolicy:
+            TableName: !Ref ListingsTable
+        - DynamoDBCrudPolicy:
+            TableName: !Ref StorefrontsTable
+      Events:
+        ApiEvent:
+          Type: Api
+          Properties:
+            Path: /orders
+            Method: any
+
+  ReviewFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: functions/review/
+      Handler: index.handler
+      Environment:
+        Variables:
+          REVIEWS_TABLE: !Ref ReviewsTable
+          STOREFRONTS_TABLE: !Ref StorefrontsTable
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref ReviewsTable
+        - DynamoDBCrudPolicy:
+            TableName: !Ref StorefrontsTable
+      Events:
+        ApiEvent:
+          Type: Api
+          Properties:
+            Path: /reviews
             Method: any

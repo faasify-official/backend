@@ -214,13 +214,253 @@ If item not found:
 ```
 root/
 ├── functions/
-│   └── items/
-│       ├── index.js          # Lambda function handler
-│       └── event.json        # Sample event for local testing
+│   ├── items/
+│   │   ├── index.js          # Lambda function handler
+│   │   └── event.json        # Sample event for local testing
+│   ├── listings/
+│   ├── cart/
+│   ├── order/
+│   └── review/
 ├── template.yaml              # SAM template defining AWS resources
 ├── package.json               # Node.js dependencies
 └── README.md                  # This file
 ```
+
+## Adding a New Lambda Function
+
+To add a new Lambda function to this project, follow these steps:
+
+### 1. Create Function Folder and Files
+
+Create a new folder in the `functions/` directory with your function name:
+
+```powershell
+New-Item -ItemType Directory -Path functions\your-function-name
+```
+
+Create the required files:
+
+```powershell
+# Create index.js (Lambda handler)
+New-Item -ItemType File -Path functions\your-function-name\index.js
+
+# Create event.json (for local testing)
+New-Item -ItemType File -Path functions\your-function-name\event.json
+```
+
+### 2. Create DynamoDB Table (if needed)
+
+If your function needs a DynamoDB table, add it to `template.yaml` in the `Resources` section:
+
+```yaml
+YourTableName:
+  Type: AWS::DynamoDB::Table
+  Properties:
+    TableName: YourTableName
+    AttributeDefinitions:
+      - AttributeName: id
+        AttributeType: S
+    KeySchema:
+      - AttributeName: id
+        KeyType: HASH
+    BillingMode: PAY_PER_REQUEST
+```
+
+For composite keys (partition key + sort key):
+
+```yaml
+YourTableName:
+  Type: AWS::DynamoDB::Table
+  Properties:
+    TableName: YourTableName
+    AttributeDefinitions:
+      - AttributeName: partitionKey
+        AttributeType: S
+      - AttributeName: sortKey
+        AttributeType: S
+    KeySchema:
+      - AttributeName: partitionKey
+        KeyType: HASH
+      - AttributeName: sortKey
+        KeyType: RANGE
+    BillingMode: PAY_PER_REQUEST
+```
+
+### 3. Add Lambda Function to template.yaml
+
+Add your Lambda function definition in the `Resources` section of `template.yaml`:
+
+```yaml
+YourFunctionName:
+  Type: AWS::Serverless::Function
+  Properties:
+    CodeUri: functions/your-function-name/
+    Handler: index.handler
+    Environment:
+      Variables:
+        YOUR_TABLE_NAME: !Ref YourTableName
+        # Add other environment variables as needed
+    Policies:
+      - DynamoDBCrudPolicy:
+          TableName: !Ref YourTableName
+      # Add more policies if accessing other tables
+    Events:
+      ApiEvent:
+        Type: Api
+        Properties:
+          Path: /your-endpoint
+          Method: any  # or specific: get, post, put, delete
+```
+
+**Key points:**
+- `CodeUri`: Path to your function folder
+- `Handler`: Always `index.handler` for Node.js
+- `Environment.Variables`: Reference tables using `!Ref TableName`
+- `Policies`: Grant DynamoDB permissions for each table your function accesses
+- `Path`: API Gateway endpoint path (e.g., `/users`, `/products`)
+- `Method`: `any` allows all HTTP methods, or specify `get`, `post`, etc.
+
+### 4. Implement Your Function Handler
+
+In `functions/your-function-name/index.js`, create a handler that checks the HTTP method:
+
+```javascript
+const { DynamoDBClient } = require("@aws-sdk/client-dynamodb");
+const { DynamoDBDocumentClient, PutCommand, GetCommand } = require("@aws-sdk/lib-dynamodb");
+
+const REGION = process.env.AWS_REGION || "us-west-2";
+const TABLE_NAME = process.env.YOUR_TABLE_NAME;
+
+const client = new DynamoDBClient({ region: REGION });
+const ddb = DynamoDBDocumentClient.from(client);
+
+exports.handler = async (event) => {
+  console.log("Received event:", JSON.stringify(event, null, 2));
+
+  const method = event.httpMethod || "GET";
+  let response;
+
+  try {
+    if (method === "POST") {
+      // Handle POST request
+      const body = JSON.parse(event.body);
+      // Your POST logic here
+      response = {
+        statusCode: 200,
+        body: JSON.stringify({ message: "Success" }),
+      };
+    } else if (method === "GET") {
+      // Handle GET request
+      // Your GET logic here
+      response = {
+        statusCode: 200,
+        body: JSON.stringify({ data: "result" }),
+      };
+    } else {
+      response = {
+        statusCode: 400,
+        body: JSON.stringify({ message: "Unsupported method" }),
+      };
+    }
+  } catch (err) {
+    console.error("Error:", err);
+    response = {
+      statusCode: 500,
+      body: JSON.stringify({ message: err.message }),
+    };
+  }
+
+  return response;
+};
+```
+
+### 5. Create Test Event File
+
+In `functions/your-function-name/event.json`, create a sample event for local testing:
+
+```json
+{
+  "httpMethod": "POST",
+  "body": "{\"key\": \"value\"}",
+  "queryStringParameters": null,
+  "pathParameters": null
+}
+```
+
+For GET requests:
+
+```json
+{
+  "httpMethod": "GET",
+  "queryStringParameters": {
+    "id": "123"
+  }
+}
+```
+
+### 6. Test Locally
+
+Build and test your new function:
+
+```powershell
+# Build the application
+sam build
+
+# Test the function directly
+sam local invoke YourFunctionName -e functions/your-function-name/event.json
+
+# Or test via API (if using sam local start-api)
+sam local start-api
+```
+
+### 7. Example: Complete Function Setup
+
+Here's a complete example for a "users" function:
+
+**Folder structure:**
+```
+functions/
+└── users/
+    ├── index.js
+    └── event.json
+```
+
+**template.yaml additions:**
+```yaml
+UsersTable:
+  Type: AWS::DynamoDB::Table
+  Properties:
+    TableName: UsersTable
+    AttributeDefinitions:
+      - AttributeName: userId
+        AttributeType: S
+    KeySchema:
+      - AttributeName: userId
+        KeyType: HASH
+    BillingMode: PAY_PER_REQUEST
+
+UsersFunction:
+  Type: AWS::Serverless::Function
+  Properties:
+    CodeUri: functions/users/
+    Handler: index.handler
+    Environment:
+      Variables:
+        USERS_TABLE: !Ref UsersTable
+    Policies:
+      - DynamoDBCrudPolicy:
+          TableName: !Ref UsersTable
+    Events:
+      ApiEvent:
+        Type: Api
+        Properties:
+          Path: /users
+          Method: any
+```
+
+**Access the endpoint:**
+- Local: `http://localhost:3000/users`
+- Deployed: `https://<api-id>.execute-api.<region>.amazonaws.com/Prod/users`
 
 ## Environment Variables
 
