@@ -1,0 +1,9 @@
+{
+  "httpMethod": "POST",
+  "path": "/storefronts",
+  "headers": {
+    "Content-Type": "application/json",
+    "Authorization": "Bearer YOUR_JWT_TOKEN_HERE"
+  },
+  "body": "{\"name\":\"My Store\",\"description\":\"A great store\",\"category\":\"Lifestyle\",\"image\":\"https://example.com/image.jpg\"}"
+}

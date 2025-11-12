@@ -28,9 +28,18 @@ Resources:
       AttributeDefinitions:
         - AttributeName: storeId
           AttributeType: S
+        - AttributeName: owner
+          AttributeType: S
       KeySchema:
         - AttributeName: storeId
           KeyType: HASH
+      GlobalSecondaryIndexes:
+        - IndexName: OwnerIndex
+          KeySchema:
+            - AttributeName: owner
+              KeyType: HASH
+          Projection:
+            ProjectionType: ALL
       BillingMode: PAY_PER_REQUEST
 
   CartTable:
@@ -227,4 +236,61 @@ Resources:
           Type: Api
           Properties:
             Path: /auth/profile
+            Method: options
+
+  StorefrontsFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: .
+      Handler: functions/storefronts/index.handler
+      Environment:
+        Variables:
+          STOREFRONTS_TABLE: !Ref StorefrontsTable
+          USERS_TABLE: !Ref UsersTable
+          JWT_SECRET: 'your-super-secret-jwt-key-change-in-production'
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref StorefrontsTable
+        - DynamoDBCrudPolicy:
+            TableName: !Ref UsersTable
+      Events:
+        CreateEvent:
+          Type: Api
+          Properties:
+            Path: /storefronts
+            Method: post
+        CreateOptionsEvent:
+          Type: Api
+          Properties:
+            Path: /storefronts
+            Method: options
+        GetEvent:
+          Type: Api
+          Properties:
+            Path: /storefronts/{storeId}
+            Method: get
+        GetOptionsEvent:
+          Type: Api
+          Properties:
+            Path: /storefronts/{storeId}
+            Method: options
+        ListEvent:
+          Type: Api
+          Properties:
+            Path: /storefronts
+            Method: get
+        ListOptionsEvent:
+          Type: Api
+          Properties:
+            Path: /storefronts
+            Method: options
+        MyStorefrontsEvent:
+          Type: Api
+          Properties:
+            Path: /storefronts/my
+            Method: get
+        MyStorefrontsOptionsEvent:
+          Type: Api
+          Properties:
+            Path: /storefronts/my
             Method: options
