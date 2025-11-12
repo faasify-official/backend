@@ -73,6 +73,27 @@ Resources:
           KeyType: HASH
       BillingMode: PAY_PER_REQUEST
 
+  UsersTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: UsersTable
+      AttributeDefinitions:
+        - AttributeName: userId
+          AttributeType: S
+        - AttributeName: email
+          AttributeType: S
+      KeySchema:
+        - AttributeName: userId
+          KeyType: HASH
+      GlobalSecondaryIndexes:
+        - IndexName: EmailIndex
+          KeySchema:
+            - AttributeName: email
+              KeyType: HASH
+          Projection:
+            ProjectionType: ALL
+      BillingMode: PAY_PER_REQUEST
+
   # Lambda Functions
   ListingsFunction:
     Type: AWS::Serverless::Function
@@ -163,3 +184,47 @@ Resources:
           Properties:
             Path: /reviews
             Method: any
+
+  AuthFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: .
+      Handler: functions/auth/index.handler
+      Environment:
+        Variables:
+          USERS_TABLE: !Ref UsersTable
+          JWT_SECRET: 'your-super-secret-jwt-key-change-in-production'
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref UsersTable
+      Events:
+        RegisterEvent:
+          Type: Api
+          Properties:
+            Path: /auth/register
+            Method: post
+        RegisterOptionsEvent:
+          Type: Api
+          Properties:
+            Path: /auth/register
+            Method: options
+        LoginEvent:
+          Type: Api
+          Properties:
+            Path: /auth/login
+            Method: post
+        LoginOptionsEvent:
+          Type: Api
+          Properties:
+            Path: /auth/login
+            Method: options
+        ProfileEvent:
+          Type: Api
+          Properties:
+            Path: /auth/profile
+            Method: get
+        ProfileOptionsEvent:
+          Type: Api
+          Properties:
+            Path: /auth/profile
+            Method: options

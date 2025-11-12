@@ -5,6 +5,7 @@ A serverless AWS Lambda application that provides a REST API for managing items 
 ## Overview
 
 This project implements a serverless API endpoint that allows you to:
+
 - **POST** items to create new entries in DynamoDB
 - **GET** items by ID from DynamoDB
 
@@ -14,7 +15,7 @@ The application uses AWS Lambda for compute, API Gateway for HTTP endpoints, and
 
 - **Runtime**: Node.js 20.x
 - **Framework**: AWS SAM (Serverless Application Model)
-- **Database**: DynamoDB 
+- **Database**: DynamoDB
 - **API**: API Gateway (REST API)
 
 ### Resources
@@ -39,10 +40,12 @@ Configure your AWS credentials:
 ```bash
 aws configure
 ```
+
 If you want access to the shared AWS account, DM Pouyan on Discord for the account details.
 Enter that account credentials from IAM into AWS CLI.
 
 Enter your:
+
 - AWS Access Key ID
 - AWS Secret Access Key
 - Default region (e.g., `us-west-2`)
@@ -91,21 +94,25 @@ The API will be available at `http://localhost:3000`
 #### Test Endpoints
 
 **Create an item (POST):**
+
 ```powershell
 curl -X POST http://localhost:3000/items -H "Content-Type: application/json" -d "{\"id\": \"123\", \"name\": \"Test Item\"}"
 ```
 
 Or using PowerShell's `Invoke-RestMethod`:
+
 ```powershell
 Invoke-RestMethod -Uri "http://localhost:3000/items" -Method POST -ContentType "application/json" -Body '{"id": "123", "name": "Test Item"}'
 ```
 
 **Get an item (GET):**
+
 ```powershell
 curl "http://localhost:3000/items?id=123"
 ```
 
 Or using PowerShell's `Invoke-RestMethod`:
+
 ```powershell
 Invoke-RestMethod -Uri "http://localhost:3000/items?id=123" -Method GET
 ```
@@ -127,6 +134,7 @@ sam deploy --guided
 ```
 
 Follow the prompts to provide:
+
 - Stack name
 - AWS Region
 - Confirm IAM role creation
@@ -152,6 +160,7 @@ curl "https://<api-id>.execute-api.<region>.amazonaws.com/Prod/items?id=123"
 ```
 
 Or using PowerShell's `Invoke-RestMethod`:
+
 ```powershell
 # Create an item
 Invoke-RestMethod -Uri "https://<api-id>.execute-api.<region>.amazonaws.com/Prod/items" -Method POST -ContentType "application/json" -Body '{"id": "123", "name": "Test Item"}'
@@ -167,6 +176,7 @@ Invoke-RestMethod -Uri "https://<api-id>.execute-api.<region>.amazonaws.com/Prod
 Creates a new item in DynamoDB.
 
 **Request Body:**
+
 ```json
 {
   "id": "string",
@@ -175,6 +185,7 @@ Creates a new item in DynamoDB.
 ```
 
 **Response:**
+
 ```json
 {
   "message": "Item added",
@@ -191,9 +202,11 @@ Creates a new item in DynamoDB.
 Retrieves an item by ID from DynamoDB.
 
 **Query Parameters:**
+
 - `id` (required): The ID of the item to retrieve
 
 **Response:**
+
 ```json
 {
   "id": "string",
@@ -203,6 +216,7 @@ Retrieves an item by ID from DynamoDB.
 ```
 
 If item not found:
+
 ```json
 {
   "message": "Item not found"
@@ -309,10 +323,11 @@ YourFunctionName:
         Type: Api
         Properties:
           Path: /your-endpoint
-          Method: any  # or specific: get, post, put, delete
+          Method: any # or specific: get, post, put, delete
 ```
 
 **Key points:**
+
 - `CodeUri`: Path to your function folder
 - `Handler`: Always `index.handler` for Node.js
 - `Environment.Variables`: Reference tables using `!Ref TableName`
@@ -326,7 +341,11 @@ In `functions/your-function-name/index.js`, create a handler that checks the HTT
 
 ```javascript
 const { DynamoDBClient } = require("@aws-sdk/client-dynamodb");
-const { DynamoDBDocumentClient, PutCommand, GetCommand } = require("@aws-sdk/lib-dynamodb");
+const {
+  DynamoDBDocumentClient,
+  PutCommand,
+  GetCommand,
+} = require("@aws-sdk/lib-dynamodb");
 
 const REGION = process.env.AWS_REGION || "us-west-2";
 const TABLE_NAME = process.env.YOUR_TABLE_NAME;
@@ -418,6 +437,7 @@ sam local start-api
 Here's a complete example for a "users" function:
 
 **Folder structure:**
+
 ```
 functions/
 └── users/
@@ -426,6 +446,7 @@ functions/
 ```
 
 **template.yaml additions:**
+
 ```yaml
 UsersTable:
   Type: AWS::DynamoDB::Table
@@ -459,6 +480,7 @@ UsersFunction:
 ```
 
 **Access the endpoint:**
+
 - Local: `http://localhost:3000/users`
 - Deployed: `https://<api-id>.execute-api.<region>.amazonaws.com/Prod/users`
 
@@ -472,6 +494,7 @@ The Lambda function uses the following environment variables (automatically set 
 ## Error Handling
 
 The API returns appropriate HTTP status codes:
+
 - `200`: Success
 - `400`: Unsupported HTTP method
 - `500`: Internal server error
@@ -483,4 +506,3 @@ To remove all AWS resources created by this application:
 ```bash
 sam delete
 ```
-
