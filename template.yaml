@@ -103,19 +103,41 @@ Resources:
             ProjectionType: ALL
       BillingMode: PAY_PER_REQUEST
 
+  ItemsTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: ItemsTable
+      AttributeDefinitions:
+        - AttributeName: id
+          AttributeType: S
+        - AttributeName: storeId
+          AttributeType: S
+      KeySchema:
+        - AttributeName: id
+          KeyType: HASH
+      GlobalSecondaryIndexes:
+        - IndexName: StoreIdIndex
+          KeySchema:
+            - AttributeName: storeId
+              KeyType: HASH
+          Projection:
+            ProjectionType: ALL
+      BillingMode: PAY_PER_REQUEST
+
   # Lambda Functions
   ListingsFunction:
     Type: AWS::Serverless::Function
     Properties:
-      CodeUri: functions/listings/
-      Handler: index.handler
+      CodeUri: .
+      Handler: functions/listings/index.handler
       Environment:
         Variables:
-          LISTINGS_TABLE: !Ref ListingsTable
+          ITEMS_TABLE: !Ref ItemsTable
           STOREFRONTS_TABLE: !Ref StorefrontsTable
+          AWS_REGION: us-west-2
       Policies:
         - DynamoDBCrudPolicy:
-            TableName: !Ref ListingsTable
+            TableName: !Ref ItemsTable
         - DynamoDBCrudPolicy:
             TableName: !Ref StorefrontsTable
       Events:
