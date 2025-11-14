@@ -65,9 +65,18 @@ Resources:
       AttributeDefinitions:
         - AttributeName: orderId
           AttributeType: S
+        - AttributeName: userId
+          AttributeType: S
       KeySchema:
         - AttributeName: orderId
           KeyType: HASH
+      GlobalSecondaryIndexes:
+        - IndexName: UserIdIndex
+          KeySchema:
+            - AttributeName: userId
+              KeyType: HASH
+          Projection:
+            ProjectionType: ALL
       BillingMode: PAY_PER_REQUEST
 
   ReviewsTable:
@@ -77,9 +86,18 @@ Resources:
       AttributeDefinitions:
         - AttributeName: reviewId
           AttributeType: S
+        - AttributeName: itemId
+          AttributeType: S
       KeySchema:
         - AttributeName: reviewId
           KeyType: HASH
+      GlobalSecondaryIndexes:
+        - IndexName: ItemIdIndex
+          KeySchema:
+            - AttributeName: itemId
+              KeyType: HASH
+          Projection:
+            ProjectionType: ALL
       BillingMode: PAY_PER_REQUEST
 
   UsersTable:
@@ -177,15 +195,17 @@ Resources:
         Variables:
           ORDERS_TABLE: !Ref OrdersTable
           CART_TABLE: !Ref CartTable
-          LISTINGS_TABLE: !Ref ListingsTable
+          ITEMS_TABLE: !Ref ItemsTable
           STOREFRONTS_TABLE: !Ref StorefrontsTable
+          JWT_SECRET: 'your-super-secret-jwt-key-change-in-production'
+          AWS_REGION: us-west-2
       Policies:
         - DynamoDBCrudPolicy:
             TableName: !Ref OrdersTable
         - DynamoDBCrudPolicy:
             TableName: !Ref CartTable
         - DynamoDBCrudPolicy:
-            TableName: !Ref ListingsTable
+            TableName: !Ref ItemsTable
         - DynamoDBCrudPolicy:
             TableName: !Ref StorefrontsTable
       Events:
@@ -203,12 +223,13 @@ Resources:
       Environment:
         Variables:
           REVIEWS_TABLE: !Ref ReviewsTable
-          STOREFRONTS_TABLE: !Ref StorefrontsTable
+          ITEMS_TABLE: !Ref ItemsTable
+          AWS_REGION: us-west-2
       Policies:
         - DynamoDBCrudPolicy:
             TableName: !Ref ReviewsTable
         - DynamoDBCrudPolicy:
-            TableName: !Ref StorefrontsTable
+            TableName: !Ref ItemsTable
       Events:
         ApiEvent:
           Type: Api
